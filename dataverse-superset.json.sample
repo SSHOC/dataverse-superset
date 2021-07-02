@@ -1,0 +1,19 @@
+{
+  "displayName": "dataverse-superset",
+  "description": "Upload tabular data to Apache Superset to help with data visualization.",
+  "scope": "file",
+  "type": "explore",
+  "hasPreviewMode": "false",
+  "toolUrl": "http://127.0.0.1:4680/dataverse-superset",
+  "contentType": "text/tab-separated-values",
+  "toolParameters": {
+    "queryParameters": [
+      { "fileid": "{fileId}" },
+      { "apiToken": "{apiToken}" },
+	  { "siteUrl": "{siteUrl}" },
+	  { "datasetId": "{datasetId}" },
+	  { "datasetVersion": "{datasetVersion}" },
+	  { "locale": "{localeCode}" }
+    ]
+  }
+}

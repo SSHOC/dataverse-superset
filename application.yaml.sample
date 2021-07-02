@@ -1,0 +1,26 @@
+server:
+  port: 4480
+
+spring:
+  datasource:
+    url: jdbc:postgresql://172.18.0.3:5432/superset?currentSchema=public
+    username: superset
+    password: superset
+  task:
+    execution:
+      thread-name-prefix: task-exec-
+      pool:
+        core-size: 4
+        max-size: 4
+        queue-capacity: 1024
+        keep-alive: 10m
+
+custom:
+  site-url-mapping: # useful when Dataverse is actually available at different address than given in siteUrl param
+    '[https://62.3.171.13]': 'https://sophora-13.man.poznan.pl'
+    '[http://localhost:8080]': 'http://dataverse-dev.localhost'
+superset:
+  uri: http://192.168.56.7:8088/
+  refresh-token: eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE2MjQzNDgwMzUsIm5iZiI6MTYyNDM0ODAzNSwianRpIjoiZDhjMGFhZDQtYzQ3OS00MzY2LTk0ZDMtNjgzYTI1YzZmODdkIiwiZXhwIjoxNjI2OTQwMDM1LCJpZGVudGl0eSI6MiwidHlwZSI6InJlZnJlc2gifQ.Z1HyKyNVlxjjPAKTx0DXvlHT00U0L3xTf6mzYoNaank
+  database-id: 1
+  schema: "public"

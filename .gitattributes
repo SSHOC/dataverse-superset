@@ -1,0 +1,29 @@
+*.xml	text
+*.properties	text
+*.yaml	text
+*.vm	text
+*.css	text
+*.less	text
+*.js	text
+*.html	text
+*.sql	text
+*.txt	text
+*.svg	text
+*.json	text
+*.md	text
+*.jsp	text
+*.xsl	text
+
+*.java text
+
+*.bat	eol=crlf
+*.csv	eol=crlf
+*.sh	eol=lf
+
+*.gif	-text
+*.jpg	-text
+*.png	-text
+*.psd	-text
+*.swv	-text
+*.ai	-text
+*.jar	-text

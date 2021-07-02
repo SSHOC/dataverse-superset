@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<title th:text="#{main.title}"></title>
+</head>
+<body>
+	<h1 th:text="#{main.title}"></h1>
+	<p>
+		<a th:href="${data.fileUrl}" th:text="${data.fileName}"></a>
+		<span th:text="${'('+ data.fileSize + ')'}"></span>
+	</p>
+	<table th:if="${!data.columns.isEmpty()}">
+		<thead>
+			<tr>
+				<th>Column</th>
+				<th>Type</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr th:each="column: ${data.columns}">
+				<td th:text="${column.name}"></td>
+				<td th:text="${column.type}"></td>
+			</tr>
+		</tbody>
+	</table>
+
+	<th:block th:switch="${data.status.name()}">
+		<div th:case="'READY'">
+			<form method="POST" action="#" th:action="@{/dataverse-superset}">
+				<input type="hidden" id="name" name="datasetName" th:value="${data.getName()}">
+				<button type="submit">Import to Superset</button>
+			</form>
+		</div>
+		<div th:case="'IN_PROGRESS'">
+			<p>Import to Superset in progress... <button onClick="window.location.reload();">Refresh</button></p>
+		</div>
+		<div th:case="'COMPLETE'">
+			<p>
+				Import to Superset complete! ID: <a
+					th:href="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"
+					th:text="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"></a>
+			</p>
+		</div>
+		<div th:case="'ERROR'">
+			<p>Import to Superset failed. Message: <span th:text="${data.error}"></span></p>
+		</div>
+	</th:block>
+</body>
+</html>
