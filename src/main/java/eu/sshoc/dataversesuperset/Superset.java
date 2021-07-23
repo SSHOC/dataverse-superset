@@ -118,7 +118,7 @@ public class Superset {
 			JSONObject json = new JSONObject(EntityUtils.toString(response.getEntity()));
 			if (response.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
 				throw new IOException(
-						"refresh token problem: " + response.getStatusLine() + " " + json.getString("message"));
+						"refresh token problem: " + response.getStatusLine() + " " + json.get("message"));
 			}
 			accessToken = json.getString("access_token");
 		}
@@ -134,7 +134,7 @@ public class Superset {
 		}
 		if (response.getStatusLine().getStatusCode() != expectedStatus) {
 			throw new IOException(
-					"dataset creation problem: " + response.getStatusLine() + " " + json.getString("message"));
+					"dataset creation problem: " + response.getStatusLine() + " " + json.get("message"));
 		}
 		return json;
 	}
