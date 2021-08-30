@@ -62,17 +62,25 @@ public class WebController {
 	
 	@GetMapping("/dataverse-superset")
 	public String displayCsv(Model model, HttpSession session,
-			@RequestParam("siteUrl") String siteUrl,
-			@RequestParam("fileid") String fileId) throws IOException {
+			@RequestParam(value = "siteUrl", required = false) String siteUrl,
+			@RequestParam(value = "fileid", required = false) String fileId,
+			@RequestParam(value = "fileUrl", required = false) String fileUrl) throws IOException {
 		@SuppressWarnings("unchecked")
 		Map<String, DataInfo> sessionDataInfos = (Map<String, DataInfo>) session.getAttribute("dataInfos");
 		if (sessionDataInfos == null) {
 			sessionDataInfos = new HashMap<>();
 			session.setAttribute("dataInfos", sessionDataInfos);
 		}
-		
-		siteUrl = siteUrlMapping.getOrDefault(siteUrl, siteUrl);
-		String fileUrl = siteUrl + "/api/access/datafile/" + fileId;
+
+		if((siteUrl == null || fileId == null) && fileUrl == null) {
+			throw new NullPointerException();
+		}
+
+		if(siteUrl != null && fileId != null) {
+			siteUrl = siteUrlMapping.getOrDefault(siteUrl, siteUrl);
+			fileUrl = siteUrl + "/api/access/datafile/" + fileId;
+		}
+
 		String name = DataInfo.getName(fileUrl);
 		DataInfo dataInfo = sessionDataInfos.get(name);
 		if (dataInfo == null) {
