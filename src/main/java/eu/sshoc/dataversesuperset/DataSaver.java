@@ -24,15 +24,10 @@
 package eu.sshoc.dataversesuperset;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-import org.apache.http.client.methods.CloseableHttpResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
@@ -72,25 +67,15 @@ public class DataSaver {
 		String insertValues = "INSERT INTO " + tableName + " VALUES ("
 				+ dataInfo.columns.stream().map(c -> "?").collect(Collectors.joining(", "))
 				+ ")";
-		try (CloseableHttpResponse response = dataLoader.openCsv(dataInfo);
-				CSVParser csv = dataLoader.createParser(response.getEntity())) {
-			Iterator<CSVRecord> it = csv.iterator();
-			List<Object[]> rows = new ArrayList<>();
-			int batchLimit = 9000;
-			int columnCount = dataInfo.columns.size();
-			while (it.hasNext()) {
-				CSVRecord record = it.next();
-				Object[] row = new Object[columnCount];
-				for (int i = 0; i < columnCount; i++) {
-					ColumnType type = dataInfo.columns.get(i).type;
-					row[i] = DataInfo.VALUE_PARSERS.get(type).parse(record.get(i));
-				}
-				rows.add(row);
-				if (rows.size() % batchLimit == 0 || !it.hasNext()) {
-					jdbcTemplate.batchUpdate(insertValues, rows);
-				}
-			}
+
+		List<Object[]> rows = dataInfo.reader.createDBInserts(dataInfo, dataLoader);
+
+		int batchLimit = 9000;
+		for(int i = batchLimit; i < rows.size(); i+=batchLimit) {
+			jdbcTemplate.batchUpdate(insertValues, rows.subList(0, i));
 		}
+		jdbcTemplate.batchUpdate(insertValues, rows);
+
 		return tableName;
 	}
 	

@@ -35,7 +35,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.csv.CSVParser;
+import eu.sshoc.dataversesuperset.readers.Reader;
 import org.springframework.util.DigestUtils;
 import org.springframework.util.StringUtils;
 
@@ -47,7 +47,7 @@ public class DataInfo {
 	public String fileName;
 	public String fileSize;
 	public List<ColumnInfo> columns = new ArrayList<>();
-	public CSVParser dataParser;
+	public Reader reader;
 	
 	public volatile long datasetId;
 	
@@ -109,7 +109,7 @@ public class DataInfo {
 	public static class ValueParser<T> {
 		Predicate<String> matcher;
 		Function<String, T> converter;
-		final ColumnType columnType;
+		public final ColumnType columnType;
 		
 		public ValueParser(ColumnType columnType, Function<String, T> converter) {
 			this(columnType, converter, v -> {
