@@ -24,14 +24,8 @@
 package eu.sshoc.dataversesuperset;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
+import eu.sshoc.dataversesuperset.readers.Reader;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HeaderElement;
 import org.apache.http.HttpEntity;
@@ -44,19 +38,14 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
-
-import eu.sshoc.dataversesuperset.DataInfo.ColumnInfo;
-import eu.sshoc.dataversesuperset.DataInfo.ColumnType;
-import eu.sshoc.dataversesuperset.DataInfo.ValueParser;
 
 @Component
 public class DataLoader {
 	
 	@Autowired
 	private Logger logger;
-	
+
 	private CloseableHttpClient httpClient;
 	
 	public DataLoader() {
@@ -80,57 +69,9 @@ public class DataLoader {
 			}
 			dataInfo.fileName = fileName;
 			dataInfo.fileSize = FileUtils.byteCountToDisplaySize(entity.getContentLength());
-			
-			try (CSVParser parser = createParser(entity)) {
-				analyzeColumns(parser, dataInfo);
-			}
-		}
-	}
-	
-	public CloseableHttpResponse openCsv(DataInfo dataInfo) throws IOException {
-		HttpGet httpGet = new HttpGet(dataInfo.fileUrl);
-		CloseableHttpResponse response = httpClient.execute(httpGet);
-		try {
-			int statusCode = response.getStatusLine().getStatusCode();
-			HttpEntity entity = response.getEntity();
-			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null)
-				throw new IOException("status code: " + statusCode);
-			return response;
-		} catch (IOException e) {
-			response.close();
-			throw e;
-		}
-	}
-	
-	public CSVParser createParser(HttpEntity entity) throws IOException {
-		String contentType = entity.getContentType().getValue();
-		if (contentType.startsWith("text/tab-separated-values"))
-			return CSVFormat.TDF.withFirstRecordAsHeader().parse(new InputStreamReader(entity.getContent()));
-		logger.warn("received content type: {}", contentType);
-		throw new ResponseStatusException(HttpStatus.NOT_FOUND, "file not valid");
-	}
+			dataInfo.reader = Reader.createReader(entity, httpClient);
 
-	private void analyzeColumns(CSVParser csvParser, DataInfo dataInfo) {
-		List<CSVRecord> records = new ArrayList<>();
-		Iterator<CSVRecord> it = csvParser.iterator();
-		int rowLimit = 500;
-		while (it.hasNext() && rowLimit --> 0) {
-			records.add(it.next());
-		}
-		
-		List<String> columns = csvParser.getHeaderNames();
-		for (String columnName : columns) {
-			ColumnType columnType = ColumnType.TEXT;
-			for (ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
-				boolean allMatch = records.stream()
-						.map(r -> r.get(columnName))
-						.allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
-				if (allMatch) {
-					columnType = valParser.columnType;
-					break;
-				}
-			}
-			dataInfo.columns.add(new ColumnInfo(columnName, columnType));
+			dataInfo.reader.analyzeColumns(entity, dataInfo);
 		}
 	}
 }
