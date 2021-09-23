@@ -1,18 +1,18 @@
 /*
  * The MIT License
- * 
+ *
  * Copyright (c) 2021 SSHOC Dataverse
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,7 +24,6 @@
 package eu.sshoc.dataversesuperset.readers;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -37,7 +36,6 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
@@ -54,12 +52,12 @@ public class CSVReader extends Reader {
 	}
 
 	@Override
-	public void analyzeColumns(HttpEntity entity, DataInfo dataInfo) {
+	public void analyzeColumns(HttpEntity entity, DataInfo dataInfo) throws IOException {
 		try (CSVParser csvParser = createCSVParser(entity)) {
 			List<CSVRecord> records = new ArrayList<>();
 			Iterator<CSVRecord> it = csvParser.iterator();
 			int rowLimit = 500;
-			while (it.hasNext() && rowLimit --> 0) {
+			while (it.hasNext() && rowLimit-- > 0) {
 				records.add(it.next());
 			}
 
@@ -77,16 +75,14 @@ public class CSVReader extends Reader {
 				}
 				dataInfo.columns.add(new ColumnInfo(columnName, columnType));
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 	}
 
 	@Override
-	public List<Object[]> createDBInserts(DataInfo dataInfo, DataLoader dataLoader) {
+	public List<Object[]> createDBInserts(DataInfo dataInfo, DataLoader dataLoader) throws IOException {
 		List<Object[]> rows = new ArrayList<>();
 		try (CloseableHttpResponse response = openFile(dataInfo);
-			 CSVParser csv = createCSVParser(response.getEntity())) {
+				CSVParser csv = createCSVParser(response.getEntity())) {
 			Iterator<CSVRecord> it = csv.iterator();
 			int columnCount = dataInfo.columns.size();
 			while (it.hasNext()) {
@@ -98,14 +94,8 @@ public class CSVReader extends Reader {
 				}
 				rows.add(row);
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
 		}
 		return rows;
-	}
-
-	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is) throws IOException {
-		return null;
 	}
 
 	private CSVParser createCSVParser(HttpEntity entity) throws IOException {

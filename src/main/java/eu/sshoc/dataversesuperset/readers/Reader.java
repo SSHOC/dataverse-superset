@@ -33,64 +33,63 @@ import org.springframework.http.HttpStatus;
 import org.springframework.util.StringUtils;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 public abstract class Reader {
 
-    protected CloseableHttpClient httpClient;
+	protected CloseableHttpClient httpClient;
 
-    protected Reader(CloseableHttpClient httpClient) {
-        this.httpClient = httpClient;
-    }
+	protected Reader(CloseableHttpClient httpClient) {
+		this.httpClient = httpClient;
+	}
 
-    public static Reader createReader(HttpEntity entity, CloseableHttpClient httpClient) {
-        String contentType = entity.getContentType().getValue();
-        if (contentType.startsWith("text/tab-separated-values") || contentType.startsWith("text/comma-separated-values")) {
-            return new CSVReader(httpClient);
-        } else if(contentType.startsWith("application/xls") || contentType.startsWith("application/xlsx")) {
-            return new ExcelReader(httpClient);
-        } else if(contentType.startsWith("application/ods")) {
-            return new ODSReader(httpClient);
-        }
-        return null;
-    }
+	public static Reader createReader(HttpEntity entity, CloseableHttpClient httpClient) {
+		String contentType = entity.getContentType().getValue();
+		if (contentType.startsWith("text/tab-separated-values") || contentType
+				.startsWith("text/comma-separated-values")) {
+			return new CSVReader(httpClient);
+		} else if (contentType.startsWith("application/xls") || contentType.startsWith("application/xlsx")) {
+			return new ExcelReader(httpClient);
+		} else if (contentType.startsWith("application/ods")) {
+			return new ODSReader(httpClient);
+		}
+		return null;
+	}
 
-    protected void extractColumns(DataInfo dataInfo, List<List<String>> records, Map<Integer, String> cellNoToName) {
-        Collection<String> columns = cellNoToName.values();
-        for (int i = 0; i < cellNoToName.size(); i++) {
-            final int column = i;
-            DataInfo.ColumnType columnType = DataInfo.ColumnType.TEXT;
-            for (DataInfo.ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
-                boolean allMatch = records.stream()
-                        .map(r -> r.get(column))
-                        .allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
-                if (allMatch) {
-                    columnType = valParser.columnType;
-                    break;
-                }
-            }
-            dataInfo.columns.add(new DataInfo.ColumnInfo(cellNoToName.get(i), columnType));
-        }
-    }
+	protected void extractColumns(DataInfo dataInfo, List<List<String>> records, Map<Integer, String> cellNoToName) {
+		for (int i = 0; i < cellNoToName.size(); i++) {
+			final int column = i;
+			DataInfo.ColumnType columnType = DataInfo.ColumnType.TEXT;
+			for (DataInfo.ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
+				boolean allMatch = records.stream()
+						.map(r -> r.get(column))
+						.allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
+				if (allMatch) {
+					columnType = valParser.columnType;
+					break;
+				}
+			}
+			dataInfo.columns.add(new DataInfo.ColumnInfo(cellNoToName.get(i), columnType));
+		}
+	}
 
-    protected CloseableHttpResponse openFile(DataInfo dataInfo) throws IOException {
-        HttpGet httpGet = new HttpGet(dataInfo.fileUrl);
-        CloseableHttpResponse response = httpClient.execute(httpGet);
-        try {
-            int statusCode = response.getStatusLine().getStatusCode();
-            HttpEntity entity = response.getEntity();
-            if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null)
-                throw new IOException("status code: " + statusCode);
-            return response;
-        } catch (IOException e) {
-            response.close();
-            throw e;
-        }
-    }
+	protected CloseableHttpResponse openFile(DataInfo dataInfo) throws IOException {
+		HttpGet httpGet = new HttpGet(dataInfo.fileUrl);
+		CloseableHttpResponse response = httpClient.execute(httpGet);
+		try {
+			int statusCode = response.getStatusLine().getStatusCode();
+			HttpEntity entity = response.getEntity();
+			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null)
+				throw new IOException("status code: " + statusCode);
+			return response;
+		} catch (IOException e) {
+			response.close();
+			throw e;
+		}
+	}
 
-    public abstract void analyzeColumns(HttpEntity entity, DataInfo dataInfo) throws IOException;
+	public abstract void analyzeColumns(HttpEntity entity, DataInfo dataInfo) throws IOException;
 
-    public abstract List<Object[]> createDBInserts(DataInfo dataInfo, DataLoader dataLoader) throws IOException;
+	public abstract List<Object[]> createDBInserts(DataInfo dataInfo, DataLoader dataLoader) throws IOException;
 }
