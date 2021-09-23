@@ -43,7 +43,7 @@ public class ODSReader extends ExcelReader {
 	}
 
 	@Override
-	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is) throws IOException {
+	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is, Integer rowLimit) throws IOException {
 		ODPackage pack = new ODPackage(is);
 		SpreadSheet spreadsheet = pack.getSpreadSheet();
 		MutableCell cell;
@@ -59,7 +59,7 @@ public class ODSReader extends ExcelReader {
 
 		List<List<String>> records = new ArrayList<>();
 		//iterates through rows
-		for (int nRowIndex = 1; ; nRowIndex++) {
+		for (int nRowIndex = 1; nRowIndex <= rowLimit; nRowIndex++) {
 			List<String> cells = new ArrayList<>();
 			for (int nColIndex = 0; ; nColIndex++) {
 				cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(nColIndex, nRowIndex);

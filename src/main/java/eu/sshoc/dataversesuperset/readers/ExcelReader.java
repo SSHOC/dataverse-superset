@@ -48,7 +48,7 @@ public class ExcelReader extends Reader {
 
 	@Override
 	public void analyzeColumns(HttpEntity entity, DataInfo dataInfo) throws IOException {
-		extractColumns(dataInfo, readDocument(dataInfo, entity.getContent()), cellNoToName);
+		extractColumns(dataInfo, readDocument(dataInfo, entity.getContent(), ANALYZE_ROW_LIMIT), cellNoToName);
 	}
 
 	@Override
@@ -57,7 +57,7 @@ public class ExcelReader extends Reader {
 
 		try (CloseableHttpResponse response = openFile(dataInfo)) {
 			int columnCount = dataInfo.columns.size();
-			for (List<String> record : readDocument(dataInfo, response.getEntity().getContent())) {
+			for (List<String> record : readDocument(dataInfo, response.getEntity().getContent(), Integer.MAX_VALUE)) {
 				Object[] row = new Object[columnCount];
 				for (int i = 0; i < columnCount; i++) {
 					DataInfo.ColumnType type = dataInfo.columns.get(i).type;
@@ -69,7 +69,7 @@ public class ExcelReader extends Reader {
 		return rows;
 	}
 
-	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is) throws IOException {
+	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is, Integer rowLimit) throws IOException {
 		Workbook myWorkBook = null;
 		if (dataInfo.fileName.endsWith(".xlsx")) {
 			myWorkBook = new XSSFWorkbook(is);
@@ -95,7 +95,8 @@ public class ExcelReader extends Reader {
 
 		List<List<String>> records = new ArrayList<>();
 		//iterates through rows
-		while (rowIterator.hasNext()) {
+		Integer rowsToRead = rowLimit;
+		while (rowIterator.hasNext() && rowsToRead-- > 0) {
 			Row row = rowIterator.next();
 			Iterator<Cell> cellIterator = row.cellIterator();
 

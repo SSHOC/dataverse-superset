@@ -56,8 +56,8 @@ public class CSVReader extends Reader {
 		try (CSVParser csvParser = createCSVParser(entity)) {
 			List<CSVRecord> records = new ArrayList<>();
 			Iterator<CSVRecord> it = csvParser.iterator();
-			int rowLimit = 500;
-			while (it.hasNext() && rowLimit-- > 0) {
+			Integer rowsToRead = ANALYZE_ROW_LIMIT;
+			while (it.hasNext() && rowsToRead-- > 0) {
 				records.add(it.next());
 			}
 

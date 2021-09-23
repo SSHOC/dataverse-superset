@@ -38,6 +38,8 @@ import java.util.Map;
 
 public abstract class Reader {
 
+	protected static final Integer ANALYZE_ROW_LIMIT = 500;
+
 	protected CloseableHttpClient httpClient;
 
 	protected Reader(CloseableHttpClient httpClient) {
