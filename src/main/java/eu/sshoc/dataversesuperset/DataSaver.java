@@ -23,17 +23,23 @@
  */
 package eu.sshoc.dataversesuperset;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
+import eu.sshoc.dataversesuperset.DataInfo.ColumnType;
+import eu.sshoc.dataversesuperset.readers.Reader;
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClients;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import eu.sshoc.dataversesuperset.DataInfo.ColumnType;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Component
 public class DataSaver {
@@ -68,17 +74,44 @@ public class DataSaver {
 				+ dataInfo.columns.stream().map(c -> "?").collect(Collectors.joining(", "))
 				+ ")";
 
-		List<Object[]> rows = dataInfo.reader.createDBInserts(dataInfo, dataLoader);
-
-		int batchLimit = 9000;
-		for(int i = batchLimit; i < rows.size(); i+=batchLimit) {
-			jdbcTemplate.batchUpdate(insertValues, rows.subList(0, i));
+		List<Object[]> rows = new ArrayList<>();
+		try (CloseableHttpResponse response = openFile(dataInfo)) {
+			int columnCount = dataInfo.columns.size();
+			Reader reader = Reader.createReader(dataInfo, response.getEntity());
+			int batchLimit = 9000;
+			while (reader.hasNext()) {
+				String[] record = reader.next();
+				Object[] row = new Object[columnCount];
+				for (int i = 0; i < columnCount; i++) {
+					DataInfo.ColumnType type = dataInfo.columns.get(i).type;
+					row[i] = DataInfo.VALUE_PARSERS.get(type).parse(record[i]);
+				}
+				rows.add(row);
+				if (rows.size() % batchLimit == 0 || !reader.hasNext()) {
+					jdbcTemplate.batchUpdate(insertValues, rows);
+					rows = new ArrayList<>();
+				}
+			}
 		}
-		jdbcTemplate.batchUpdate(insertValues, rows);
 
 		return tableName;
 	}
-	
+
+	protected CloseableHttpResponse openFile(DataInfo dataInfo) throws IOException {
+		HttpGet httpGet = new HttpGet(dataInfo.fileUrl);
+		CloseableHttpResponse response = HttpClients.createDefault().execute(httpGet);
+		try {
+			int statusCode = response.getStatusLine().getStatusCode();
+			HttpEntity entity = response.getEntity();
+			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null)
+				throw new IOException("status code: " + statusCode);
+			return response;
+		} catch (IOException e) {
+			response.close();
+			throw e;
+		}
+	}
+
 	public void deleteTable(String tableName) {
 		jdbcTemplate.execute("DROP TABLE IF EXISTS " + tableName);
 	}
