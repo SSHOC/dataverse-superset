@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DataInfo {
-
+	
 	public final String siteUrl;
 	public final String fileId;
 	public final String fileUrl;

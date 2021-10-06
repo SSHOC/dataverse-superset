@@ -1,18 +1,18 @@
 /*
  * The MIT License
- * 
+ *
  * Copyright (c) 2021 SSHOC Dataverse
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -48,7 +48,7 @@ public class DataLoader {
 	
 	@Autowired
 	private Logger logger;
-
+	
 	private final CloseableHttpClient httpClient;
 	
 	public DataLoader() {
@@ -62,7 +62,7 @@ public class DataLoader {
 			HttpEntity entity = response.getEntity();
 			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null) {
 				logger.error("{}: status code {}", dataInfo.fileUrl, statusCode);
-				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "file not found");
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file not found");
 			}
 			String fileName = "unknown-file.tab";
 			for (HeaderElement element : response.getFirstHeader("Content-Disposition").getElements()) {
@@ -72,29 +72,30 @@ public class DataLoader {
 			}
 			dataInfo.fileName = fileName;
 			dataInfo.fileSize = FileUtils.byteCountToDisplaySize(entity.getContentLength());
-
-			Reader reader = Reader.createReader(dataInfo, response.getEntity());
-			List<String[]> rows = new ArrayList<>();
-			int rowLimit = 500;
-			while (reader.hasNext() && rowLimit-- > 0) {
-				rows.add(reader.next());
-			}
-
-			List<String> columns = reader.getColumns();
-			for (int i = 0; i < columns.size(); i++) {
-				final int columnI = i;
-				DataInfo.ColumnType columnType = DataInfo.ColumnType.TEXT;
-				for (DataInfo.ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
-					boolean allMatch = rows.stream()
-							.map(r -> r[columnI])
-							.allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
-					if (allMatch) {
-						columnType = valParser.columnType;
-						break;
-					}
+			
+			try(Reader reader = Reader.createReader(dataInfo, response.getEntity())) {
+				List<List<String>> rows = new ArrayList<>();
+				int rowLimit = 500;
+				while (reader.hasNext() && rowLimit-- > 0) {
+					rows.add(reader.next());
 				}
-				dataInfo.columns.add(new DataInfo.ColumnInfo(columns.get(i), columnType));
-			}
+				
+				List<String> columns = reader.getColumns();
+				for (int i = 0; i < columns.size(); i++) {
+					final int columnI = i;
+					DataInfo.ColumnType columnType = DataInfo.ColumnType.TEXT;
+					for (DataInfo.ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
+						boolean allMatch = rows.stream()
+								.map(r -> r.get(columnI))
+								.allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
+						if (allMatch) {
+							columnType = valParser.columnType;
+							break;
+						}
+					}
+					dataInfo.columns.add(new DataInfo.ColumnInfo(columns.get(i), columnType));
+				}
+			};
 		}
 	}
 }

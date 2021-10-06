@@ -31,53 +31,57 @@ import org.jopendocument.dom.spreadsheet.MutableCell;
 import org.jopendocument.dom.spreadsheet.SpreadSheet;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
-public class ODSReader extends ExcelReader {
-
+public class ODSReader extends Reader {
+	
 	private static final int SHEET_NUMBER = 0;
-
+	
 	private SpreadSheet spreadsheet;
 	private int nRowIndex;
-
+	
 	protected ODSReader(DataInfo dataInfo, HttpEntity entity) {
 		super(dataInfo, entity);
 	}
-
+	
 	@Override
 	public boolean hasNext() {
 		return !spreadsheet.getSheet(SHEET_NUMBER).getCellAt(0, nRowIndex).isEmpty();
 	}
-
+	
 	@Override
-	public String[] next() {
-		MutableCell cell;
-		String[] cells = new String[columns.size()];
-		for (int i = 0; ; i++) {
-			cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(i, nRowIndex);
-			if (cell.isEmpty())
-				break;
-			cells[i] = getCellValue(cell);
+	public List<String> next() {
+		List<String> cells = new ArrayList<>();
+		for (int i = 0; i < columns.size(); i++) {
+			MutableCell<?> cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(i, nRowIndex);
+			if (!cell.isEmpty())
+				cells.add(getCellValue(cell));
 		}
 		nRowIndex++;
 		return cells;
 	}
-
+	
 	@Override
 	protected void initIterator() throws IOException {
 		spreadsheet = new ODPackage(entity.getContent()).getSpreadSheet();
-		MutableCell cell;
-
+		
 		//first row - column names
 		for (int nColIndex = 0; ; nColIndex++) {
-			cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(nColIndex, 0);
+			MutableCell<?> cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(nColIndex, 0);
 			if (cell.isEmpty())
 				break;
 			columns.add(nColIndex, getCellValue(cell));
 		}
 		nRowIndex = 1;
 	}
-
-	private static String getCellValue(MutableCell cell) {
+	
+	private static String getCellValue(MutableCell<?> cell) {
 		return ODValueType.forObject(cell.getValue()).format(cell.getValue());
+	}
+	
+	@Override
+	public void close() throws IOException {
+		//don't need to close anything
 	}
 }

@@ -29,11 +29,13 @@ import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.HttpClients;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -52,6 +54,9 @@ public class DataSaver {
 			ColumnType.TIME, "time",
 			ColumnType.DATETIME, "timestamp",
 			ColumnType.TEXT, "text");
+	
+	@Autowired
+	Logger logger;
 	
 	@Autowired
 	JdbcTemplate jdbcTemplate;
@@ -75,21 +80,20 @@ public class DataSaver {
 				+ ")";
 
 		List<Object[]> rows = new ArrayList<>();
-		try (CloseableHttpResponse response = openFile(dataInfo)) {
+		try (CloseableHttpResponse response = openFile(dataInfo); Reader reader = Reader.createReader(dataInfo, response.getEntity())) {
 			int columnCount = dataInfo.columns.size();
-			Reader reader = Reader.createReader(dataInfo, response.getEntity());
 			int batchLimit = 9000;
 			while (reader.hasNext()) {
-				String[] record = reader.next();
+				List<String> record = reader.next();
 				Object[] row = new Object[columnCount];
 				for (int i = 0; i < columnCount; i++) {
 					DataInfo.ColumnType type = dataInfo.columns.get(i).type;
-					row[i] = DataInfo.VALUE_PARSERS.get(type).parse(record[i]);
+					row[i] = DataInfo.VALUE_PARSERS.get(type).parse(record.get(i));
 				}
 				rows.add(row);
 				if (rows.size() % batchLimit == 0 || !reader.hasNext()) {
 					jdbcTemplate.batchUpdate(insertValues, rows);
-					rows = new ArrayList<>();
+					rows.clear();
 				}
 			}
 		}
@@ -103,10 +107,12 @@ public class DataSaver {
 		try {
 			int statusCode = response.getStatusLine().getStatusCode();
 			HttpEntity entity = response.getEntity();
-			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null)
-				throw new IOException("status code: " + statusCode);
+			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null) {
+				logger.error("{}: status code {}", dataInfo.fileUrl, statusCode);
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file not found");
+			}
 			return response;
-		} catch (IOException e) {
+		} catch (ResponseStatusException e) {
 			response.close();
 			throw e;
 		}

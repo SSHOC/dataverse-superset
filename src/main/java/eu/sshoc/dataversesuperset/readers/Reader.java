@@ -30,26 +30,27 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-public abstract class Reader implements Iterator<String[]> {
-
+public abstract class Reader implements Iterator<List<String>>, Closeable {
+	
 	protected static Logger logger = LoggerFactory.getLogger(Reader.class);
-
+	
 	protected HttpEntity entity;
-
+	
 	protected DataInfo dataInfo;
-
+	
 	protected List<String> columns = new ArrayList<>();
-
+	
 	protected Reader(DataInfo dataInfo, HttpEntity entity) {
 		this.entity = entity;
 		this.dataInfo = dataInfo;
 	}
-
+	
 	public static Reader createReader(DataInfo dataInfo, HttpEntity entity) throws IOException {
 		String contentType = entity.getContentType().getValue();
 		Reader reader;
@@ -67,9 +68,9 @@ public abstract class Reader implements Iterator<String[]> {
 		reader.initIterator();
 		return reader;
 	}
-
+	
 	protected abstract void initIterator() throws IOException;
-
+	
 	public List<String> getColumns() {
 		return columns;
 	}

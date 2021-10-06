@@ -1,18 +1,18 @@
 /*
  * The MIT License
- * 
+ *
  * Copyright (c) 2021 SSHOC Dataverse
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -33,12 +33,15 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Controller
 public class WebController {
@@ -65,21 +68,21 @@ public class WebController {
 			@RequestParam(value = "fileUrl", required = false) String fileUrl) throws IOException {
 		@SuppressWarnings("unchecked")
 		Map<String, DataInfo> sessionDataInfos = (Map<String, DataInfo>) session.getAttribute("dataInfos");
-
+		
 		if (sessionDataInfos == null && (siteUrl == null || fileId == null) && fileUrl == null) {
-			throw new NullPointerException();
+			throw new ResponseStatusException(BAD_REQUEST);
 		}
-
+		
 		if (sessionDataInfos == null) {
 			sessionDataInfos = new HashMap<>();
 			session.setAttribute("dataInfos", sessionDataInfos);
 		}
-
+		
 		if (siteUrl != null && fileId != null) {
 			siteUrl = siteUrlMapping.getOrDefault(siteUrl, siteUrl);
 			fileUrl = siteUrl + "/api/access/datafile/" + fileId;
 		}
-
+		
 		String name = DataInfo.getName(fileUrl);
 		DataInfo dataInfo = sessionDataInfos.get(name);
 		if (dataInfo == null) {

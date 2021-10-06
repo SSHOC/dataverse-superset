@@ -33,34 +33,36 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class ExcelReader extends Reader {
-
+	
 	private Workbook myWorkBook = null;
 	private Iterator<Row> rowIterator;
-
+	
 	protected ExcelReader(DataInfo dataInfo, HttpEntity entity) {
 		super(dataInfo, entity);
 	}
-
+	
 	@Override
 	public boolean hasNext() {
 		return rowIterator.hasNext();
 	}
-
+	
 	@Override
-	public String[] next() {
+	public List<String> next() {
 		Row row = rowIterator.next();
 		Iterator<Cell> cellIterator = row.cellIterator();
-
-		String[] cells = new String[columns.size()];
+		
+		List<String> cells = new ArrayList<>();
 		for (int i = 0; i < columns.size() && cellIterator.hasNext(); i++) {
-			cells[i] = getCellValue(cellIterator.next());
+			cells.add(getCellValue(cellIterator.next()));
 		}
 		return cells;
 	}
-
+	
 	@Override
 	protected void initIterator() throws IOException {
 		if (dataInfo.fileName.endsWith(".xlsx")) {
@@ -68,11 +70,11 @@ public class ExcelReader extends Reader {
 		} else if (dataInfo.fileName.endsWith(".xls")) {
 			myWorkBook = new HSSFWorkbook(entity.getContent());
 		}
-
+		
 		Iterator<Sheet> sheetIt = myWorkBook.sheetIterator();
 		Sheet mySheet = sheetIt.next();
 		rowIterator = mySheet.iterator();
-
+		
 		//first row - column names
 		if (rowIterator.hasNext()) {
 			Iterator<Cell> cellIterator = rowIterator.next().cellIterator();
@@ -82,7 +84,7 @@ public class ExcelReader extends Reader {
 			}
 		}
 	}
-
+	
 	private static String getCellValue(Cell cell) {
 		switch (cell.getCellType()) {
 		case STRING:
@@ -100,5 +102,10 @@ public class ExcelReader extends Reader {
 		default:
 			return "";
 		}
+	}
+	
+	@Override
+	public void close() throws IOException {
+		myWorkBook.close();
 	}
 }

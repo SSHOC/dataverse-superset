@@ -33,35 +33,37 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 public class CSVReader extends Reader {
-
+	
+	private CSVParser csvParser;
 	private Iterator<CSVRecord> it;
-
+	
 	protected CSVReader(DataInfo dataInfo, HttpEntity entity) {
 		super(dataInfo, entity);
 	}
-
+	
 	@Override
 	public boolean hasNext() {
 		return it.hasNext();
 	}
-
+	
 	@Override
-	public String[] next() {
-		String[] row = new String[columns.size()];
+	public List<String> next() {
+		List<String> cells = new ArrayList<>();
 		Iterator<String> itCol = it.next().iterator();
 		for (int i = 0; itCol.hasNext() && i < columns.size(); i++) {
-			row[i] = itCol.next();
+			cells.add(itCol.next());
 		}
-		return row;
+		return cells;
 	}
-
+	
 	@Override
 	protected void initIterator() throws IOException {
 		String contentType = entity.getContentType().getValue();
-		CSVParser csvParser;
 		if (contentType.startsWith("text/tab-separated-values")) {
 			csvParser = CSVFormat.TDF.withFirstRecordAsHeader().parse(new InputStreamReader(entity.getContent()));
 		} else if (contentType.startsWith("text/comma-separated-values")) {
@@ -72,5 +74,10 @@ public class CSVReader extends Reader {
 		}
 		it = csvParser.iterator();
 		columns = csvParser.getHeaderNames();
+	}
+	
+	@Override
+	public void close() throws IOException {
+		csvParser.close();
 	}
 }
