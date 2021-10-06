@@ -81,7 +81,7 @@ public class ODSReader extends Reader {
 	}
 	
 	@Override
-	public void close() throws IOException {
+	public void close() {
 		//don't need to close anything
 	}
 }

@@ -95,7 +95,7 @@ public class DataLoader {
 					}
 					dataInfo.columns.add(new DataInfo.ColumnInfo(columns.get(i), columnType));
 				}
-			};
+			}
 		}
 	}
 }
