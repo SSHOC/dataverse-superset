@@ -23,6 +23,9 @@
  */
 package eu.sshoc.dataversesuperset;
 
+import org.springframework.util.DigestUtils;
+import org.springframework.util.StringUtils;
+
 import java.sql.Date;
 import java.sql.Time;
 import java.sql.Timestamp;
@@ -35,10 +38,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import eu.sshoc.dataversesuperset.readers.Reader;
-import org.springframework.util.DigestUtils;
-import org.springframework.util.StringUtils;
-
 public class DataInfo {
 	
 	public final String siteUrl;
@@ -47,7 +46,6 @@ public class DataInfo {
 	public String fileName;
 	public String fileSize;
 	public List<ColumnInfo> columns = new ArrayList<>();
-	public Reader reader;
 	
 	public volatile long datasetId;
 	

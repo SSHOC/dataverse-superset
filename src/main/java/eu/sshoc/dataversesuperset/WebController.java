@@ -23,12 +23,7 @@
  */
 package eu.sshoc.dataversesuperset;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.servlet.http.HttpSession;
-
+import eu.sshoc.dataversesuperset.DataInfo.Status;
 import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -38,9 +33,15 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import eu.sshoc.dataversesuperset.DataInfo.Status;
+import javax.servlet.http.HttpSession;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @Controller
 public class WebController {
@@ -67,20 +68,21 @@ public class WebController {
 			@RequestParam(value = "fileUrl", required = false) String fileUrl) throws IOException {
 		@SuppressWarnings("unchecked")
 		Map<String, DataInfo> sessionDataInfos = (Map<String, DataInfo>) session.getAttribute("dataInfos");
+		
+		if (sessionDataInfos == null && (siteUrl == null || fileId == null) && fileUrl == null) {
+			throw new ResponseStatusException(BAD_REQUEST);
+		}
+		
 		if (sessionDataInfos == null) {
 			sessionDataInfos = new HashMap<>();
 			session.setAttribute("dataInfos", sessionDataInfos);
 		}
-
-		if((siteUrl == null || fileId == null) && fileUrl == null) {
-			throw new NullPointerException();
-		}
-
-		if(siteUrl != null && fileId != null) {
+		
+		if (siteUrl != null && fileId != null) {
 			siteUrl = siteUrlMapping.getOrDefault(siteUrl, siteUrl);
 			fileUrl = siteUrl + "/api/access/datafile/" + fileId;
 		}
-
+		
 		String name = DataInfo.getName(fileUrl);
 		DataInfo dataInfo = sessionDataInfos.get(name);
 		if (dataInfo == null) {
@@ -108,6 +110,7 @@ public class WebController {
 		appContext.getBean(WebController.class).importCsvAsync(dataInfo);
 		redirectAttributes.addAttribute("siteUrl", dataInfo.siteUrl);
 		redirectAttributes.addAttribute("fileid", dataInfo.fileId);
+		redirectAttributes.addAttribute("fileUrl", dataInfo.fileUrl);
 		return "redirect:/dataverse-superset";
 	}
 	

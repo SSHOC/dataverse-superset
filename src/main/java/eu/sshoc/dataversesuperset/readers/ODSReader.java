@@ -24,57 +24,64 @@
 package eu.sshoc.dataversesuperset.readers;
 
 import eu.sshoc.dataversesuperset.DataInfo;
-import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.HttpEntity;
 import org.jopendocument.dom.ODPackage;
 import org.jopendocument.dom.ODValueType;
 import org.jopendocument.dom.spreadsheet.MutableCell;
 import org.jopendocument.dom.spreadsheet.SpreadSheet;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-public class ODSReader extends ExcelReader {
-
+public class ODSReader extends Reader {
+	
 	private static final int SHEET_NUMBER = 0;
-
-	protected ODSReader(CloseableHttpClient httpClient) {
-		super(httpClient);
+	
+	private SpreadSheet spreadsheet;
+	private int nRowIndex;
+	
+	protected ODSReader(DataInfo dataInfo, HttpEntity entity) {
+		super(dataInfo, entity);
 	}
-
+	
 	@Override
-	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is) throws IOException {
-		ODPackage pack = new ODPackage(is);
-		SpreadSheet spreadsheet = pack.getSpreadSheet();
-		MutableCell cell;
-
+	public boolean hasNext() {
+		return !spreadsheet.getSheet(SHEET_NUMBER).getCellAt(0, nRowIndex).isEmpty();
+	}
+	
+	@Override
+	public List<String> next() {
+		List<String> cells = new ArrayList<>();
+		for (int i = 0; i < columns.size(); i++) {
+			MutableCell<?> cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(i, nRowIndex);
+			if (!cell.isEmpty())
+				cells.add(getCellValue(cell));
+		}
+		nRowIndex++;
+		return cells;
+	}
+	
+	@Override
+	protected void initIterator() throws IOException {
+		spreadsheet = new ODPackage(entity.getContent()).getSpreadSheet();
+		
 		//first row - column names
-		cellNoToName = new HashMap<>();
 		for (int nColIndex = 0; ; nColIndex++) {
-			cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(nColIndex, 0);
+			MutableCell<?> cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(nColIndex, 0);
 			if (cell.isEmpty())
 				break;
-			cellNoToName.put(nColIndex, getCellValue(cell));
+			columns.add(nColIndex, getCellValue(cell));
 		}
-
-		List<List<String>> records = new ArrayList<>();
-		//iterates through rows
-		for (int nRowIndex = 1; ; nRowIndex++) {
-			List<String> cells = new ArrayList<>();
-			for (int nColIndex = 0; ; nColIndex++) {
-				cell = spreadsheet.getSheet(SHEET_NUMBER).getCellAt(nColIndex, nRowIndex);
-				if (cell.isEmpty())
-					break;
-				cells.add(getCellValue(cell));
-			}
-			if (cell.getX() == 0)
-				break;
-			records.add(cells);
-		}
-		return records;
+		nRowIndex = 1;
 	}
-
-	private static String getCellValue(MutableCell cell) {
+	
+	private static String getCellValue(MutableCell<?> cell) {
 		return ODValueType.forObject(cell.getValue()).format(cell.getValue());
+	}
+	
+	@Override
+	public void close() {
+		//don't need to close anything
 	}
 }

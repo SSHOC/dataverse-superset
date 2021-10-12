@@ -24,72 +24,54 @@
 package eu.sshoc.dataversesuperset.readers;
 
 import eu.sshoc.dataversesuperset.DataInfo;
-import eu.sshoc.dataversesuperset.DataLoader;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.CloseableHttpClient;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
-import org.springframework.util.StringUtils;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
-public abstract class Reader {
-
-	protected CloseableHttpClient httpClient;
-
-	protected Reader(CloseableHttpClient httpClient) {
-		this.httpClient = httpClient;
+public abstract class Reader implements Iterator<List<String>>, Closeable {
+	
+	protected static Logger logger = LoggerFactory.getLogger(Reader.class);
+	
+	protected HttpEntity entity;
+	
+	protected DataInfo dataInfo;
+	
+	protected List<String> columns = new ArrayList<>();
+	
+	protected Reader(DataInfo dataInfo, HttpEntity entity) {
+		this.entity = entity;
+		this.dataInfo = dataInfo;
 	}
-
-	public static Reader createReader(HttpEntity entity, CloseableHttpClient httpClient) {
+	
+	public static Reader createReader(DataInfo dataInfo, HttpEntity entity) throws IOException {
 		String contentType = entity.getContentType().getValue();
+		Reader reader;
 		if (contentType.startsWith("text/tab-separated-values") || contentType
 				.startsWith("text/comma-separated-values")) {
-			return new CSVReader(httpClient);
+			reader = new CSVReader(dataInfo, entity);
 		} else if (contentType.startsWith("application/xls") || contentType.startsWith("application/xlsx")) {
-			return new ExcelReader(httpClient);
+			reader = new ExcelReader(dataInfo, entity);
 		} else if (contentType.startsWith("application/ods")) {
-			return new ODSReader(httpClient);
+			reader = new ODSReader(dataInfo, entity);
+		} else {
+			logger.warn("received content type: {}", contentType);
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "file not valid");
 		}
-		return null;
+		reader.initIterator();
+		return reader;
 	}
-
-	protected void extractColumns(DataInfo dataInfo, List<List<String>> records, Map<Integer, String> cellNoToName) {
-		for (int i = 0; i < cellNoToName.size(); i++) {
-			final int column = i;
-			DataInfo.ColumnType columnType = DataInfo.ColumnType.TEXT;
-			for (DataInfo.ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
-				boolean allMatch = records.stream()
-						.map(r -> r.get(column))
-						.allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
-				if (allMatch) {
-					columnType = valParser.columnType;
-					break;
-				}
-			}
-			dataInfo.columns.add(new DataInfo.ColumnInfo(cellNoToName.get(i), columnType));
-		}
+	
+	protected abstract void initIterator() throws IOException;
+	
+	public List<String> getColumns() {
+		return columns;
 	}
-
-	protected CloseableHttpResponse openFile(DataInfo dataInfo) throws IOException {
-		HttpGet httpGet = new HttpGet(dataInfo.fileUrl);
-		CloseableHttpResponse response = httpClient.execute(httpGet);
-		try {
-			int statusCode = response.getStatusLine().getStatusCode();
-			HttpEntity entity = response.getEntity();
-			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null)
-				throw new IOException("status code: " + statusCode);
-			return response;
-		} catch (IOException e) {
-			response.close();
-			throw e;
-		}
-	}
-
-	public abstract void analyzeColumns(HttpEntity entity, DataInfo dataInfo) throws IOException;
-
-	public abstract List<Object[]> createDBInserts(DataInfo dataInfo, DataLoader dataLoader) throws IOException;
 }

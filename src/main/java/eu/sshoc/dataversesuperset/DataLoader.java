@@ -23,8 +23,6 @@
  */
 package eu.sshoc.dataversesuperset;
 
-import java.io.IOException;
-
 import eu.sshoc.dataversesuperset.readers.Reader;
 import org.apache.commons.io.FileUtils;
 import org.apache.http.HeaderElement;
@@ -38,15 +36,20 @@ import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @Component
 public class DataLoader {
 	
 	@Autowired
 	private Logger logger;
-
-	private CloseableHttpClient httpClient;
+	
+	private final CloseableHttpClient httpClient;
 	
 	public DataLoader() {
 		httpClient = HttpClients.createDefault();
@@ -59,7 +62,7 @@ public class DataLoader {
 			HttpEntity entity = response.getEntity();
 			if (statusCode != HttpStatus.OK.value() || entity == null || entity.getContentType() == null) {
 				logger.error("{}: status code {}", dataInfo.fileUrl, statusCode);
-				throw new ResponseStatusException(HttpStatus.NOT_FOUND, "file not found");
+				throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "file not found");
 			}
 			String fileName = "unknown-file.tab";
 			for (HeaderElement element : response.getFirstHeader("Content-Disposition").getElements()) {
@@ -69,9 +72,30 @@ public class DataLoader {
 			}
 			dataInfo.fileName = fileName;
 			dataInfo.fileSize = FileUtils.byteCountToDisplaySize(entity.getContentLength());
-			dataInfo.reader = Reader.createReader(entity, httpClient);
-
-			dataInfo.reader.analyzeColumns(entity, dataInfo);
+			
+			try(Reader reader = Reader.createReader(dataInfo, response.getEntity())) {
+				List<List<String>> rows = new ArrayList<>();
+				int rowLimit = 500;
+				while (reader.hasNext() && rowLimit-- > 0) {
+					rows.add(reader.next());
+				}
+				
+				List<String> columns = reader.getColumns();
+				for (int i = 0; i < columns.size(); i++) {
+					final int columnI = i;
+					DataInfo.ColumnType columnType = DataInfo.ColumnType.TEXT;
+					for (DataInfo.ValueParser<?> valParser : DataInfo.VALUE_PARSERS.values()) {
+						boolean allMatch = rows.stream()
+								.map(r -> r.get(columnI))
+								.allMatch(v -> !StringUtils.hasLength(v) || valParser.matches(v));
+						if (allMatch) {
+							columnType = valParser.columnType;
+							break;
+						}
+					}
+					dataInfo.columns.add(new DataInfo.ColumnInfo(columns.get(i), columnType));
+				}
+			}
 		}
 	}
 }

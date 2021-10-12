@@ -24,10 +24,7 @@
 package eu.sshoc.dataversesuperset.readers;
 
 import eu.sshoc.dataversesuperset.DataInfo;
-import eu.sshoc.dataversesuperset.DataLoader;
 import org.apache.http.HttpEntity;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -35,80 +32,59 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class ExcelReader extends Reader {
-
-	protected Map<Integer, String> cellNoToName;
-
-	protected ExcelReader(CloseableHttpClient httpClient) {
-		super(httpClient);
+	
+	private Workbook myWorkBook = null;
+	private Iterator<Row> rowIterator;
+	
+	protected ExcelReader(DataInfo dataInfo, HttpEntity entity) {
+		super(dataInfo, entity);
 	}
-
+	
 	@Override
-	public void analyzeColumns(HttpEntity entity, DataInfo dataInfo) throws IOException {
-		extractColumns(dataInfo, readDocument(dataInfo, entity.getContent()), cellNoToName);
+	public boolean hasNext() {
+		return rowIterator.hasNext();
 	}
-
+	
 	@Override
-	public List<Object[]> createDBInserts(DataInfo dataInfo, DataLoader dataLoader) throws IOException {
-		List<Object[]> rows = new ArrayList<>();
-
-		try (CloseableHttpResponse response = openFile(dataInfo)) {
-			int columnCount = dataInfo.columns.size();
-			for (List<String> record : readDocument(dataInfo, response.getEntity().getContent())) {
-				Object[] row = new Object[columnCount];
-				for (int i = 0; i < columnCount; i++) {
-					DataInfo.ColumnType type = dataInfo.columns.get(i).type;
-					row[i] = DataInfo.VALUE_PARSERS.get(type).parse(record.get(i));
-				}
-				rows.add(row);
-			}
+	public List<String> next() {
+		Row row = rowIterator.next();
+		Iterator<Cell> cellIterator = row.cellIterator();
+		
+		List<String> cells = new ArrayList<>();
+		for (int i = 0; i < columns.size() && cellIterator.hasNext(); i++) {
+			cells.add(getCellValue(cellIterator.next()));
 		}
-		return rows;
+		return cells;
 	}
-
-	protected List<List<String>> readDocument(DataInfo dataInfo, InputStream is) throws IOException {
-		Workbook myWorkBook = null;
+	
+	@Override
+	protected void initIterator() throws IOException {
 		if (dataInfo.fileName.endsWith(".xlsx")) {
-			myWorkBook = new XSSFWorkbook(is);
+			myWorkBook = new XSSFWorkbook(entity.getContent());
 		} else if (dataInfo.fileName.endsWith(".xls")) {
-			myWorkBook = new HSSFWorkbook(is);
+			myWorkBook = new HSSFWorkbook(entity.getContent());
 		}
-
+		
 		Iterator<Sheet> sheetIt = myWorkBook.sheetIterator();
-
 		Sheet mySheet = sheetIt.next();
-
-		Iterator<Row> rowIterator = mySheet.iterator();
-
+		rowIterator = mySheet.iterator();
+		
 		//first row - column names
-		cellNoToName = new HashMap<>();
 		if (rowIterator.hasNext()) {
 			Iterator<Cell> cellIterator = rowIterator.next().cellIterator();
 			while (cellIterator.hasNext()) {
 				Cell cell = cellIterator.next();
-				cellNoToName.put(cell.getColumnIndex(), getCellValue(cell));
+				columns.add(getCellValue(cell));
 			}
 		}
-
-		List<List<String>> records = new ArrayList<>();
-		//iterates through rows
-		while (rowIterator.hasNext()) {
-			Row row = rowIterator.next();
-			Iterator<Cell> cellIterator = row.cellIterator();
-
-			List<String> cells = new ArrayList<>();
-			while (cellIterator.hasNext()) {
-				cells.add(getCellValue(cellIterator.next()));
-			}
-			records.add(cells);
-		}
-		myWorkBook.close();
-		return records;
 	}
-
+	
 	private static String getCellValue(Cell cell) {
 		switch (cell.getCellType()) {
 		case STRING:
@@ -126,5 +102,10 @@ public class ExcelReader extends Reader {
 		default:
 			return "";
 		}
+	}
+	
+	@Override
+	public void close() throws IOException {
+		myWorkBook.close();
 	}
 }
