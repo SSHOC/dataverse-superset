@@ -51,15 +51,23 @@ public abstract class Reader implements Iterator<List<String>>, Closeable {
 		this.dataInfo = dataInfo;
 	}
 	
+	private static final Set<String> CSV_TAB_CONTENT_TYPES =
+			new HashSet<>(Arrays.asList("text/tab-separated-values", "text/comma-separated-values",
+					"text/semicolon-separated-values"));
+	private static final Set<String> EXCEL_CONTENT_TYPES = new HashSet<>(
+			Arrays.asList("application/xls", "application/xlsx", "application/vnd.ms-excel",
+					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+	private static final Set<String> OPEN_DOCUMENT_CONTENT_TYPES = new HashSet<>(Arrays.asList("application/ods"));
+
 	public static Reader createReader(DataInfo dataInfo, HttpEntity entity) throws IOException {
 		String contentType = entity.getContentType().getValue();
 		Reader reader;
-		if (contentType.startsWith("text/tab-separated-values") || contentType
-				.startsWith("text/comma-separated-values")) {
+
+		if (CSV_TAB_CONTENT_TYPES.stream().anyMatch(contentType::startsWith)) {
 			reader = new CSVReader(dataInfo, entity);
-		} else if (contentType.startsWith("application/xls") || contentType.startsWith("application/xlsx")) {
+		} else if (EXCEL_CONTENT_TYPES.stream().anyMatch(contentType::startsWith)) {
 			reader = new ExcelReader(dataInfo, entity);
-		} else if (contentType.startsWith("application/ods")) {
+		} else if (OPEN_DOCUMENT_CONTENT_TYPES.stream().anyMatch(contentType::startsWith)) {
 			reader = new ODSReader(dataInfo, entity);
 		} else {
 			logger.warn("received content type: {}", contentType);
