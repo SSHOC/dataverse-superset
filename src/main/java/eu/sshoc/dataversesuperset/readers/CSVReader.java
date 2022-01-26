@@ -67,7 +67,9 @@ public class CSVReader extends Reader {
 		if (contentType.startsWith("text/tab-separated-values")) {
 			csvParser = CSVFormat.TDF.withFirstRecordAsHeader().parse(new InputStreamReader(entity.getContent()));
 		} else if (contentType.startsWith("text/comma-separated-values")) {
-			csvParser = CSVFormat.DEFAULT.withFirstRecordAsHeader().parse(new InputStreamReader(entity.getContent()));
+			csvParser = CSVFormat.EXCEL.withFirstRecordAsHeader().parse(new InputStreamReader(entity.getContent()));
+		} else if (contentType.startsWith("text/semicolon-separated-values")) {
+			csvParser = CSVFormat.EXCEL.withDelimiter(';').withFirstRecordAsHeader().parse(new InputStreamReader(entity.getContent()));
 		} else {
 			logger.warn("received content type: {}", contentType);
 			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "file not valid");

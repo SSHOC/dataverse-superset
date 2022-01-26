@@ -49,7 +49,7 @@ public class DataSaver {
 	private final static Map<ColumnType, String> DB_TYPES = Map.of(
 			ColumnType.BOOLEAN, "boolean",
 			ColumnType.INTEGER, "bigint",
-			ColumnType.FLOATING, "numeric(32,32)",
+			ColumnType.FLOATING, "numeric(32,16)",
 			ColumnType.DATE, "date",
 			ColumnType.TIME, "time",
 			ColumnType.DATETIME, "timestamp",
