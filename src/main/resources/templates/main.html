@@ -41,6 +41,7 @@
 					th:href="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"
 					th:text="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"></a>
 			</p>
+			<iframe width="100%" height="1000px" seamless frameBorder="0" scrolling="no" th:src="${@environment.getProperty('superset.uri') + charts.get(0)}" ></iframe>
 		</div>
 		<div th:case="'ERROR'">
 			<p>Import to Superset failed. Message: <span th:text="${data.error}"></span></p>

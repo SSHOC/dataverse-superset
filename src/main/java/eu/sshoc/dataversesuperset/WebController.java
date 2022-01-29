@@ -91,6 +91,7 @@ public class WebController {
 			if (datasetId >= 0) {
 				dataInfo.datasetId = datasetId;
 				dataInfo.status = Status.COMPLETE;
+				model.addAttribute("charts", superset.findChartUrls(datasetId));
 			}
 			dataLoader.loadMetadata(dataInfo);
 			sessionDataInfos.put(name, dataInfo);
