@@ -41,7 +41,20 @@
 					th:href="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"
 					th:text="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"></a>
 			</p>
-			<iframe width="100%" height="1000px" seamless frameBorder="0" scrolling="no" th:src="${@environment.getProperty('superset.uri') + charts.get(0)}" ></iframe>
+
+			<div th:if="${chartToUrl != null && chartToUrl.size() > 0}">
+				Select chart:
+				<select id="chartSelector" th:field="*{chartToUrl}" onchange="document.getElementById('chartIFrame').setAttribute('src', document.getElementById('chartSelector').value)">
+					<option th:each="entry : ${chartToUrl.entrySet()}" th:value="${@environment.getProperty('superset.uri') + entry.value}" th:text="${entry.key}"></option>
+				</select>
+				<iframe id="chartIFrame" style="width:95%; height:1000px; margin: 20px; border:0;"
+						th:src="${@environment.getProperty('superset.uri') + chartToUrl.get(chartToUrl.keySet().iterator().next())}" ></iframe>
+			</div>
+
+			<div th:unless="${chartToUrl != null && chartToUrl.size() > 0}">
+				<div>No charts found</div>
+			</div>
+
 		</div>
 		<div th:case="'ERROR'">
 			<p>Import to Superset failed. Message: <span th:text="${data.error}"></span></p>

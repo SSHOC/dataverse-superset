@@ -26,9 +26,7 @@ package eu.sshoc.dataversesuperset;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.apache.catalina.util.URLEncoder;
 import org.apache.http.HttpHeaders;
@@ -97,11 +95,11 @@ public class Superset {
 		}
 	}
 
-	public List<String> findChartUrls(long datasourceId) throws IOException {
+	public Map<String, String> findChartUrls(long datasourceId) throws IOException {
 		refreshToken();
 
 		JSONObject json = new JSONObject();
-		json.put("columns", new JSONArray(List.of("url")));
+		json.put("columns", new JSONArray(List.of("slice_name", "url")));
 		json.put("filters", new JSONArray(List.of(new JSONObject(
 				Map.of("col", "datasource_id",
 						"opr", "eq",
@@ -112,14 +110,15 @@ public class Superset {
 		json.put("page_size", 20);
 		HttpGet get = get("chart/?q=" + new URLEncoder().encode(json.toString(), Charset.forName("UTF-8")));
 
-		List<String> urls = new ArrayList<>();
+		Map<String, String> chartToUrl = new LinkedHashMap<>();
 		try (CloseableHttpResponse response = httpClient.execute(get)) {
 			json = getJson(response, HttpStatus.SC_OK);
 			JSONArray resultArray = json.getJSONArray("result");
 			for (int i = 0; i < resultArray.length(); i++) {
-				urls.add(resultArray.getJSONObject(i).getString("url") + "&standalone=1");
+				chartToUrl.put(resultArray.getJSONObject(i).getString("slice_name"),
+						resultArray.getJSONObject(i).getString("url") + "&standalone=1");
 			}
-			return urls;
+			return chartToUrl;
 		}
 
 	}
