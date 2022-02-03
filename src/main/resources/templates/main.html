@@ -2,38 +2,11 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
 	<meta charset="UTF-8">
+	<link rel="stylesheet" th:href="@{/styles/styles.css}">
+	<script type="text/javascript" th:src="@{/js/main.js}"></script>
 	<title th:text="#{main.title}"></title>
-	<style>
-		.embedCode {
-			font-family: 'Courier New';
-			border: 1px solid;
-			border-color: black;
-			padding: 5px;
-			width: 500px;
-			height: 80px;
-			font-size:10pt
-		}
-		#chartIFrame {
-			width:95%;
-			height:1000px;
-			margin: 20px;
-			border:0;
-		}
-	</style>
-	<script>
-		function showHideEmbedCode(embedChartId, embedChartButtonId) {
-			var embedChartStyle = document.getElementById(embedChartId).style;
-			embedChartStyle.display = (embedChartStyle.display === "none" ? "block" : "none");
-			document.getElementById(embedChartButtonId).textContent = (embedChart.style.display === "none" ? "Embed chart" : "Hide embed code");
-		}
-		function changeChart(chartFrameId, chartSelectorId) {
-			document.getElementById('chartIFrame').setAttribute('src', document.getElementById('chartSelector').value);
-			document.getElementById('embedChart').textContent =
-				'<iframe width="600" height="400" seamless frameBorder="0" scrolling="no" src="' + document.getElementById('chartSelector').value + '&height=400"></iframe>';
-		}
-	</script>
 </head>
-<body>
+<body onload="changeChart('chartIFrame', 'chartSelector');">
 	<h1 th:text="#{main.title}"></h1>
 	<p>
 		<a th:href="${data.fileUrl}" th:text="${data.fileName}"></a>
@@ -67,23 +40,21 @@
 		</div>
 
 		<div th:case="'COMPLETE'">
-			<p>
-				Dataset imported to superset! Explore the data:  <a
-					th:href="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"
-					th:text="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}"></a>
-			</p>
 
 			<div th:if="${chartToUrl != null && chartToUrl.size() > 0}">
 				Related charts:
 				<select id="chartSelector" th:field="*{chartToUrl}" onchange="changeChart('chartIFrame', 'chartSelector');">
-					<option th:each="entry : ${chartToUrl.entrySet()}" th:value="${@environment.getProperty('superset.uri') + entry.value}" th:text="${entry.key}"></option>
+					<option th:each="entry : ${chartToUrl.entrySet()}" th:value="${@environment.getProperty('superset.uri') + entry.value + '&height=700px'}" th:text="${entry.key}"></option>
 				</select>
-				<button id="showHideEmbedChart" onclick="showHideEmbedCode('embedChart', 'showHideEmbedChart');">Embed chart</button>
-				<p id="embedChart" class="embedCode" style="display:none;">
-					&lt;iframe width="600" height="400" seamless frameBorder="0" scrolling="no" src="http://127.0.0.1:8088//superset/explore/?form_data=%7B%22slice_id%22%3A%20839%7D&amp;standalone=1&amp;height=400"&gt;&lt;/iframe&gt;
-				</p>
-				<iframe id="chartIFrame" th:src="${@environment.getProperty('superset.uri') + chartToUrl.get(chartToUrl.keySet().iterator().next())}" ></iframe>
+				<button id="toggleEmbedChart" onclick="toggleEmbedCode('embedChart', 'toggleEmbedChart');">Embed chart</button>
+				<p id="embedChart" class="embedCode" style="display:none;"></p>
+				<iframe id="chartIFrame"></iframe>
 			</div>
+
+			<p>
+				Dataset imported to superset!
+				<a th:href="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}" target="_blank">Create a chart in Superset</a>
+			</p>
 
 			<div th:unless="${chartToUrl != null && chartToUrl.size() > 0}">
 				<div>No related charts found</div>
