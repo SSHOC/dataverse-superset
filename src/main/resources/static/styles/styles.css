@@ -1,0 +1,15 @@
+.embedCode {
+	font-family: 'Courier New';
+	border: 1px solid;
+	border-color: black;
+	padding: 5px;
+	width: 500px;
+	height: 80px;
+	font-size: 10pt
+}
+#chartIFrame {
+	width: 95%;
+	height: 450px;
+	margin: 20px;
+	border: 0;
+}

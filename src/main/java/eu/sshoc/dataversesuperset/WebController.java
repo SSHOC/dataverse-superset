@@ -85,16 +85,22 @@ public class WebController {
 		
 		String name = DataInfo.getName(fileUrl);
 		DataInfo dataInfo = sessionDataInfos.get(name);
+		long datasetId = superset.findDataset(name);
 		if (dataInfo == null) {
 			dataInfo = new DataInfo(siteUrl, fileId, fileUrl);
-			long datasetId = superset.findDataset(name);
 			if (datasetId >= 0) {
 				dataInfo.datasetId = datasetId;
 				dataInfo.status = Status.COMPLETE;
+				model.addAttribute("chartToUrl", superset.findChartUrls(datasetId));
 			}
 			dataLoader.loadMetadata(dataInfo);
 			sessionDataInfos.put(name, dataInfo);
 		}
+
+		if (datasetId >= 0) {
+			model.addAttribute("chartToUrl", superset.findChartUrls(datasetId));
+		}
+
 		model.addAttribute("data", dataInfo);
 		
 		return "main";
