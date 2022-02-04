@@ -51,14 +51,13 @@
 				<iframe id="chartIFrame"></iframe>
 			</div>
 
+			<div th:unless="${chartToUrl != null && chartToUrl.size() > 0}">
+				<div>Dataset imported to superset, but no related charts found</div>
+			</div>
+
 			<p>
-				Dataset imported to superset!
 				<a th:href="${@environment.getProperty('superset.uri') + 'superset/explore/table/' + data.datasetId}" target="_blank">Create a chart in Superset</a>
 			</p>
-
-			<div th:unless="${chartToUrl != null && chartToUrl.size() > 0}">
-				<div>No related charts found</div>
-			</div>
 
 		</div>
 
