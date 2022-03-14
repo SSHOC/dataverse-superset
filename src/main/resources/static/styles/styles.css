@@ -1,15 +1,39 @@
-.embedCode {
-	font-family: 'Courier New';
-	border: 1px solid;
-	border-color: black;
-	padding: 5px;
-	width: 500px;
-	height: 80px;
-	font-size: 10pt
-}
 #chartIFrame {
-	width: 95%;
-	height: 450px;
-	margin: 20px;
-	border: 0;
+	width: 100%;
+	height: 620px;
+	margin: 20px 0;
+	border: 1px solid #ddd;
+	border-radius: 4px;
+}
+
+.section {
+	padding: 130px 0 20px;
+}
+
+.section__select--container {
+	grid-gap: 20px;
+}
+
+.section__select--select {
+	flex: 1;
+}
+
+.section__embed {
+	font-family: 'Courier New';
+	border: 1px solid #ddd;
+	border-radius: 4px;
+	padding: 7px;
+	font-size: 13px;
+	margin: 20px 0 0;
+	word-break: break-word;
+}
+
+.section__import {
+	display: flex;
+	grid-gap: 15px;
+	align-items: center;
+}
+
+.no-margin {
+	margin: 0;
 }
